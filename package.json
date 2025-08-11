@@ -1,0 +1,58 @@
+{
+    "name": "webfetch-mcp",
+    "version": "0.1.7",
+    "type": "module",
+    "private": false,
+    "description": "Production-ready MCP server for web search and content extraction. Live web access for your local AI with tunable search and clean content extraction.",
+    "main": "server.mjs",
+    "bin": {
+        "webfetch-mcp": "./server.mjs"
+    },
+    "scripts": {
+        "start": "node server.mjs",
+        "monitor": "node monitor-logs.mjs",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "lm-studio",
+        "web-scraping",
+        "search",
+        "ai-tools",
+        "readability",
+        "searxng",
+        "content-extraction",
+        "web-fetch",
+        "local-ai"
+    ],
+    "author": {
+        "name": "Jay Leon",
+        "url": "https://github.com/manull"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/manull/webfetch-mcp.git"
+    },
+    "homepage": "https://github.com/manull/webfetch-mcp#readme",
+    "bugs": {
+        "url": "https://github.com/manull/webfetch-mcp/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.17.2",
+        "@mozilla/readability": "^0.6.0",
+        "jsdom": "^24.1.3",
+        "zod": "^3.25.76"
+    },
+    "files": [
+        "server.mjs",
+        "monitor-logs.mjs",
+        "README.md",
+        "LICENSE",
+        "LM_STUDIO_SETUP.md"
+    ]
+}
