@@ -140,8 +140,7 @@ DEBUG=true node server.mjs
 
 # 🤝 Contributing
 We welcome:
-* 🐛 Bug reports → [Open an issue](https://github.com/manull/webfetch-mcp/issues)
-* 💡 Feature ideas → [Start a discussion](https://github.com/manull/webfetch-mcp/discussions)
+* 🐛 Bug reports → [Open an issue](https://github.com/manooll/webfetch-mcp/issues)
 * 🔧 Code PRs
 * 📖 Documentation improvements
 
