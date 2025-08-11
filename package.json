@@ -1,6 +1,6 @@
 {
     "name": "webfetch-mcp",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "type": "module",
     "private": false,
     "description": "Production-ready MCP server for web search and content extraction. Live web access for your local AI with tunable search and clean content extraction.",

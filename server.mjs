@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * WebFetch.MCP v0.1.7
+ * WebFetch.MCP v0.1.8
  * Live Web Access for Your Local AI — Tunable Search & Clean Content Extraction
  * 
  * A production-ready Model Context Protocol (MCP) server that provides web search 
@@ -16,7 +16,7 @@
  * 
  * @author Jay Leon (@manull)
  * @license MIT
- * @version 0.1.7
+ * @version 0.1.8
  * @repository https://github.com/manull/webfetch-mcp
  * 
  * Copyright (c) 2025 Jay Leon (@manull)
@@ -43,26 +43,58 @@ const SEARXNG_BASE = process.env.SEARXNG_BASE || "http://localhost:8080";
 const DEBUG = process.env.DEBUG === "true";
 const DETAILED_LOG = process.env.DETAILED_LOG !== "false"; // Default to true
 
-// Simple call tracking
-let callCount = 0;
-const MAX_CALLS = 8;
-const startTime = Date.now();
+// Time-based rate limiting - more user-friendly approach
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CALLS_PER_WINDOW = 12; // Allow more calls but over time
+const BURST_LIMIT = 8; // Max calls in quick succession
+const BURST_WINDOW_MS = 30 * 1000; // 30 seconds
+
+let callHistory = []; // Array of timestamps
 
 const checkCallLimit = () => {
-  callCount++;
-  const remaining = MAX_CALLS - callCount;
+  const now = Date.now();
   
-  if (callCount > MAX_CALLS) {
+  // Clean up old calls outside the main window
+  callHistory = callHistory.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+  
+  // Check burst limit (quick succession)
+  const recentCalls = callHistory.filter(timestamp => now - timestamp < BURST_WINDOW_MS);
+  
+  if (recentCalls.length >= BURST_LIMIT) {
     return {
       limited: true,
-      message: `🛑 **Rate Limit Reached**: You've made ${callCount} tool calls. Please restart LM Studio to reset the limit, or try to work with the information already gathered. Consider being more specific in your queries to get better results with fewer calls.`
+      message: `🛑 **Burst Limit Reached**: ${BURST_LIMIT} calls in ${BURST_WINDOW_MS/1000} seconds. Please wait ${Math.ceil((BURST_WINDOW_MS - (now - recentCalls[0]))/1000)} seconds before making more requests. This prevents overwhelming websites and ensures reliable service.`
     };
   }
+  
+  // Check overall window limit
+  if (callHistory.length >= MAX_CALLS_PER_WINDOW) {
+    const oldestCall = Math.min(...callHistory);
+    const resetTime = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - oldestCall)) / 1000 / 60);
+    return {
+      limited: true,
+      message: `🛑 **Rate Limit Reached**: ${MAX_CALLS_PER_WINDOW} calls in ${RATE_LIMIT_WINDOW_MS/1000/60} minutes. Please wait ${resetTime} minute(s) for the limit to reset. This ensures responsible web scraping and prevents server overload.`
+    };
+  }
+  
+  // Add current call to history
+  callHistory.push(now);
+  
+  // Provide helpful warnings
+  const remaining = MAX_CALLS_PER_WINDOW - callHistory.length;
+  const recentCount = recentCalls.length + 1; // +1 for current call
   
   if (remaining <= 2) {
     return {
       limited: false,
-      warning: `⚠️ **${remaining} calls remaining** - Please use them wisely.`
+      warning: `⚠️ **${remaining} calls remaining** in this ${RATE_LIMIT_WINDOW_MS/1000/60}-minute window.`
+    };
+  }
+  
+  if (recentCount >= BURST_LIMIT - 2) {
+    return {
+      limited: false,
+      warning: `⚠️ **${BURST_LIMIT - recentCount} quick calls remaining** - Consider spacing out requests.`
     };
   }
   

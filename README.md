@@ -1,4 +1,4 @@
-# 🌐 WebFetch.MCP v0.1.7
+# 🌐 WebFetch.MCP v0.1.8
 
 **Live Web Access for Your Local AI — Tunable Search & Clean Content Extraction**
 
@@ -118,6 +118,25 @@ In LM Studio:
 | SEARXNG_BASE | http://localhost:8080 | SearxNG instance URL |
 | DEBUG | false | Debug logging |
 | DETAILED_LOG | true | Detailed log output |
+
+# ⏱️ Smart Rate Limiting
+WebFetch.MCP uses intelligent time-based rate limiting designed for real research workflows:
+
+### **📊 Rate Limits:**
+- **12 calls per 5-minute window** - Generous limit for research sessions
+- **8 calls per 30-second burst** - Prevents LLM spam while allowing quick queries
+- **Automatic reset** - No need to restart LM Studio between research sessions
+
+### **🎯 Why This Works Better:**
+- ✅ **Research-friendly** - Supports extended research sessions
+- ✅ **Anti-spam protection** - Prevents runaway LLM tool calling
+- ✅ **No restarts needed** - Limits reset automatically over time
+- ✅ **Clear feedback** - Shows remaining calls and reset times
+
+### **📈 Example Usage Patterns:**
+- **Quick research**: 5-8 rapid calls, then brief pause
+- **Extended research**: 12 calls spread over 5 minutes
+- **Continuous work**: Limits reset as you work, no interruption
 
 # 📊 Example Usage
 **Search**
