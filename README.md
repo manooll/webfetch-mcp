@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/manooll-webfetch-mcp-badge.png)](https://mseep.ai/app/manooll-webfetch-mcp)
+
 # 🌐 WebFetch.MCP v0.1.8
 
 **Live Web Access for Your Local AI — Tunable Search & Clean Content Extraction**
