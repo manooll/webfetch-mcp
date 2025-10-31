@@ -71,6 +71,18 @@ A few third-party MCP servers exist, but they’re API-locked, incomplete, or a 
 git clone https://github.com/searxng/searxng-docker.git
 cd searxng-docker
 sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
+```
+
+You will also need to enable JSON support for local SearXNG instance.  You can do this by adding the following to the bottom of the `searxng/settings.xml` file:
+```yaml
+search:
+  formats:
+    - html
+    - json
+```
+
+Then, start the local SearXNG instance:
+```bash
 docker compose up -d
 ```
 
