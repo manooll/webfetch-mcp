@@ -95,7 +95,7 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 ### 2️⃣ Install WebFetch.MCP
 ```bash
-git clone https://github.com/manull/webfetch-mcp.git
+git clone https://github.com/manooll/webfetch-mcp.git
 cd webfetch-mcp
 npm install
 node server.mjs
