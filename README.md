@@ -10,11 +10,11 @@
 **Local LLMs can't browse the web.** Out of the box, LM Studio — and most MCP setups — leave your model stuck in **2023 or earlier**. No live data. No current events. Paste a URL into chat and all you get back is:
 
 *"I can't access the web."*
-A few third-party MCP servers exist, but they’re API-locked, incomplete, or a pain to run. That means LM Studio users are flying blind — unable to fetch or search live content reliably.
+A few third-party MCP servers exist, but they're API-locked, incomplete, or a pain to run. That means LM Studio users are flying blind — unable to fetch or search live content reliably.
 
 # ✅ The Solution — WebFetch.MCP
 **WebFetch.MCP** is a drop-in, self-hosted MCP server that brings your local AI:
-* 🕒 **Fresh, Real-Time Data** — Go beyond your model’s training cutoff.
+* 🕒 **Fresh, Real-Time Data** — Go beyond your model's training cutoff.
 * 🌐 **Reliable URL Fetch** — Paste a link, get the clean content.
 * 🎛 **Full Search Control** — Choose engines, boost sources, filter by type/date/language.
 * 🔓 **API-Free Freedom** — No API keys, quotas, or tracking.
@@ -22,7 +22,7 @@ A few third-party MCP servers exist, but they’re API-locked, incomplete, or a 
 
 **Privacy Note:** Search requests and web fetches are visible to your ISP and target sites. Use a VPN for enhanced privacy.
 
-# 🏆 Why It’s Different
+# 🏆 Why It's Different
 | **Feature** | **WebFetch.MCP** | **mrkrsl-web-search** | **mcp-server-fetch-python** | **Crawl4AI** |
 |:-:|:-:|:-:|:-:|:-:|
 | Live Web Search | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
@@ -83,7 +83,7 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 ### 2️⃣ Install WebFetch.MCP
 ```bash
-git clone https://github.com/manull/webfetch-mcp.git
+git clone https://github.com/manooll/webfetch-mcp.git
 cd webfetch-mcp
 npm install
 node server.mjs
