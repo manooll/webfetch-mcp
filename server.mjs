@@ -51,6 +51,30 @@ const BURST_WINDOW_MS = 30 * 1000; // 30 seconds
 
 let callHistory = []; // Array of timestamps
 
+// ---------- Fetch result cache ----------
+const FETCH_CACHE_MAX = 50;
+const FETCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const fetchCache = new Map();
+
+const getCachedFetch = (key) => {
+  const entry = fetchCache.get(key);
+  if (entry && Date.now() - entry.timestamp < FETCH_CACHE_TTL_MS) {
+    log("Cache hit for:", key.slice(0, 80));
+    return entry.data;
+  }
+  if (entry) fetchCache.delete(key);
+  return null;
+};
+
+const setCachedFetch = (key, data) => {
+  if (fetchCache.size >= FETCH_CACHE_MAX) {
+    const oldest = fetchCache.keys().next().value;
+    fetchCache.delete(oldest);
+  }
+  fetchCache.set(key, { data, timestamp: Date.now() });
+};
+// ----------
+
 const checkCallLimit = () => {
   const now = Date.now();
   
@@ -288,7 +312,7 @@ const TOOLS = [
   },
   {
     name: "web_fetch",
-    description: "Fetch and extract readable content from a web page URL using Mozilla Readability.",
+    description: "Fetch and extract readable content from any web page URL. Works directly without SearxNG. Uses Mozilla Readability for clean article extraction with smart fallback for non-standard pages.",
     inputSchema: {
       type: "object",
       properties: {
@@ -457,6 +481,28 @@ async function handleWebSearch(args) {
   } catch (error) {
     log("Exception in web_search:", error);
     
+    // Detect SearxNG connection failures for helpful diagnostics
+    const isConnectionError = error.cause?.code === 'ECONNREFUSED' 
+      || error.cause?.code === 'ECONNRESET'
+      || error.message?.includes('fetch failed')
+      || error.message?.includes('Connection refused');
+    
+    if (isConnectionError) {
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Web search unavailable: Cannot connect to SearxNG at ${SEARXNG_BASE}.
+
+SearxNG is required for web search functionality. To fix:
+1. Install and start SearxNG locally (docker or pip), OR
+2. Set the SEARXNG_BASE environment variable to a public instance, e.g.:
+   SEARXNG_BASE=https://searx.party
+
+Web fetch (URL content extraction) still works without SearxNG.` 
+        }]
+      };
+    }
+    
     return {
       content: [{ 
         type: "text", 
@@ -502,6 +548,13 @@ async function handleWebFetch(args) {
         text: `Invalid URL: ${urlError.message}` 
       }]
     };
+  }
+  
+  // Check fetch cache first
+  const cacheKey = `fetch:${validUrl.toString()}:${max_chars}`;
+  const cachedContent = getCachedFetch(cacheKey);
+  if (cachedContent) {
+    return { content: [{ type: "text", text: cachedContent }] };
   }
   
   try {
@@ -733,6 +786,9 @@ async function handleWebFetch(args) {
     }
     
     log("Content extraction completed, content length:", extractedContent.length);
+    
+    // Store in fetch cache
+    setCachedFetch(cacheKey, extractedContent);
     
     // Add warning if approaching limit
     if (limitCheck.warning) {
