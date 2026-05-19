@@ -34,6 +34,7 @@ import { Readability } from "@mozilla/readability";
 import { writeFileSync, appendFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { tavily } from "@tavily/core";
 
 // Use Node.js built-in fetch
 const fetch = globalThis.fetch;
@@ -42,6 +43,11 @@ const fetch = globalThis.fetch;
 const SEARXNG_BASE = process.env.SEARXNG_BASE || "http://localhost:8080";
 const DEBUG = process.env.DEBUG === "true";
 const DETAILED_LOG = process.env.DETAILED_LOG !== "false"; // Default to true
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
+const SEARCH_PROVIDER = process.env.SEARCH_PROVIDER || "searxng"; // 'searxng' | 'tavily'
+
+// Initialize Tavily client if API key is available
+const tavilyClient = TAVILY_API_KEY ? tavily({ apiKey: TAVILY_API_KEY }) : null;
 
 // Time-based rate limiting - more user-friendly approach
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -238,7 +244,7 @@ log("Starting MCP server...");
 const TOOLS = [
   {
     name: "web_search",
-    description: "Search the web using a local SearxNG instance. Returns search results with titles, URLs, and snippets.",
+    description: "Search the web using a local SearxNG instance or Tavily (configurable via SEARCH_PROVIDER env var). Returns search results with titles, URLs, and snippets.",
     inputSchema: {
       type: "object",
       properties: {
@@ -310,9 +316,72 @@ const TOOLS = [
 ];
 
 // ---------- Tool Handlers ----------
+async function handleWebSearchTavily(args) {
+  log("web_search (tavily) called with args:", args);
+
+  const { query, limit = 5, site, time_range } = args;
+
+  if (!query) {
+    return {
+      content: [{ type: "text", text: "Error: Missing required parameter 'query'" }]
+    };
+  }
+
+  if (!tavilyClient) {
+    return {
+      content: [{ type: "text", text: "Tavily search failed: TAVILY_API_KEY is not configured." }]
+    };
+  }
+
+  try {
+    const searchOptions = {
+      maxResults: Math.min(Math.max(limit, 1), 20),
+    };
+
+    if (time_range) {
+      searchOptions.timeRange = time_range;
+    }
+
+    if (site) {
+      searchOptions.includeDomains = [site];
+    }
+
+    const response = await tavilyClient.search(query, searchOptions);
+
+    const results = response.results || [];
+
+    if (results.length === 0) {
+      return {
+        content: [{ type: "text", text: `No search results found for query: "${query}"` }]
+      };
+    }
+
+    let formattedResponse = `Search Results for "${query}":\n\n`;
+    results.forEach((result, index) => {
+      formattedResponse += `${index + 1}. **${safeText(result.title || "No title", 300)}**\n`;
+      formattedResponse += `   URL: ${result.url || ""}\n`;
+      formattedResponse += `   ${safeText(result.content || "", 500)}\n`;
+      formattedResponse += `   Source: tavily (score: ${result.score || 0})\n\n`;
+    });
+
+    formattedResponse += `\nFound ${results.length} results`;
+
+    log("Returning Tavily result with", results.length, "items");
+
+    return {
+      content: [{ type: "text", text: formattedResponse }]
+    };
+  } catch (error) {
+    log("Exception in web_search (tavily):", error);
+    return {
+      content: [{ type: "text", text: `Tavily search failed: ${error.message}` }]
+    };
+  }
+}
+
 async function handleWebSearch(args) {
   log("web_search called with args:", args);
-  
+
   // Check call limit
   const limitCheck = checkCallLimit();
   if (limitCheck.limited) {
@@ -320,7 +389,16 @@ async function handleWebSearch(args) {
       content: [{ type: "text", text: limitCheck.message }]
     };
   }
-  
+
+  // Provider selection: use Tavily if configured
+  if (SEARCH_PROVIDER === "tavily") {
+    const result = await handleWebSearchTavily(args);
+    if (limitCheck.warning) {
+      result.content[0].text += `\n\n${limitCheck.warning}`;
+    }
+    return result;
+  }
+
   const { query, limit = 5, site, engines, language, safesearch, page = 1, time_range } = args;
   
   if (!query) {
@@ -456,11 +534,23 @@ async function handleWebSearch(args) {
     
   } catch (error) {
     log("Exception in web_search:", error);
-    
+
+    // Fallback to Tavily if SearxNG fails and Tavily is available
+    if (tavilyClient && SEARCH_PROVIDER !== "tavily") {
+      log("SearxNG failed, falling back to Tavily");
+      try {
+        const tavilyResult = await handleWebSearchTavily(args);
+        tavilyResult.content[0].text = `[SearxNG unavailable, using Tavily fallback]\n\n` + tavilyResult.content[0].text;
+        return tavilyResult;
+      } catch (fallbackError) {
+        log("Tavily fallback also failed:", fallbackError);
+      }
+    }
+
     return {
-      content: [{ 
-        type: "text", 
-        text: `Search failed: ${error.message}` 
+      content: [{
+        type: "text",
+        text: `Search failed: ${error.message}`
       }]
     };
   }
@@ -848,6 +938,8 @@ async function main() {
       name: "mcp-web-tools-final",
       version: "0.6.0",
       searxng_base: SEARXNG_BASE,
+      search_provider: SEARCH_PROVIDER,
+      tavily_configured: !!tavilyClient,
       debug_enabled: DEBUG,
       detailed_log_enabled: DETAILED_LOG,
       log_file: LOG_FILE
@@ -892,7 +984,11 @@ async function main() {
   });
   
   console.error("MCP Web Tools Server ready");
+  console.error(`[mcp-web-tools-working] Search provider: ${SEARCH_PROVIDER}`);
   console.error(`[mcp-web-tools-working] SearxNG Base: ${SEARXNG_BASE}`);
+  if (tavilyClient) {
+    console.error(`[mcp-web-tools-working] Tavily: configured (fallback ${SEARCH_PROVIDER !== 'tavily' ? 'enabled' : 'N/A - primary'})`);
+  }
   console.error(`[mcp-web-tools-working] Debug mode: ${DEBUG}`);
   console.error(`[mcp-web-tools-working] Detailed logging: ${DETAILED_LOG ? 'ENABLED' : 'DISABLED'}`);
   if (DETAILED_LOG) {
